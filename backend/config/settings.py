@@ -129,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Africa/Tunis'
+TIME_ZONE = config('TIME_ZONE', default='UTC' if not DEBUG else 'Africa/Tunis')
 
 USE_I18N = True
 
