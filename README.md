@@ -1,28 +1,26 @@
 # Aaref_Bledek Campaign Platform
 
-Aaref_Bledek is a full-stack campaign platform built to support the EstateMind initiative for real-estate awareness in Tunisia. It combines a modern React landing experience with a Django REST backend that stores participant registrations, campaign regions, and campaign activities.
+Aaref_Bledek is a full-stack campaign platform for EstateMind's Tunisia real-estate awareness initiative. It includes:
 
-## Overview
+1. A public React campaign website where users can join.
+2. A Django REST backend that validates and stores registrations.
+3. A Django Admin panel to review joined participants.
 
-The platform is designed around one core workflow:
+This README is a full deployment and operations playbook based on the working production setup.
 
-1. Visitors explore the campaign vision and activities.
-2. Visitors join the movement through a 3-step registration modal.
-3. Registrations are validated and saved in the backend database.
-4. Admin users can review all joined participants through Django Admin.
+## Table of Contents
 
-## Key Features
+1. Architecture
+2. Features
+3. Repository Structure
+4. Local Development Setup
+5. Production Deployment (Render + Vercel)
+6. Environment Variables (Ready-to-Use)
+7. Verification Checklist
+8. Troubleshooting Guide (Real Incidents)
+9. Security and Maintenance
 
-- Campaign landing page with animated sections and strong visual storytelling.
-- Multi-step join form with front-end validation.
-- Backend validation for:
-  - Unique email addresses.
-  - Tunisian phone number format.
-  - Minimum motivation length.
-- Campaign statistics endpoint (participants, regions, role distribution).
-- Django Admin interface for managing joined users and campaign data.
-
-## Tech Stack
+## Architecture
 
 ### Frontend
 
@@ -36,81 +34,61 @@ The platform is designed around one core workflow:
 - Django 4.2
 - Django REST Framework
 - django-cors-headers
+- WhiteNoise
+- Gunicorn
 - python-decouple
-- SQLite (local mode) or PostgreSQL (configurable)
 
-## Project Structure
+### Database
+
+- Render PostgreSQL (production)
+- SQLite (optional local fallback)
+
+### Runtime Flow
+
+1. User opens Vercel frontend URL.
+2. Join form sends POST request to Render backend API.
+3. Backend validates payload and writes to Render Postgres.
+4. Admin reviews users in Django Admin.
+
+## Features
+
+- Animated campaign landing page sections.
+- Multi-step join modal.
+- Client-side and server-side validation.
+- Read-only endpoints for campaign data.
+- Campaign stats endpoint.
+- Admin management for participants, regions, activities.
+
+## Repository Structure
 
 ```text
 Aaref_Bledek/
   backend/
-    campaign/            # Models, serializers, views, API routes
-    config/              # Django settings and global URL config
-    manage.py
+    campaign/
+      admin.py
+      models.py
+      serializers.py
+      urls.py
+      views.py
+    config/
+      settings.py
+      urls.py
+    .env.template
+    .python-version
+    build.sh
+    Procfile
+    runtime.txt
     requirements.txt
+    manage.py
   frontend/
-    src/components/      # UI sections and registration modal
-    src/services/api.js  # Axios client for backend API
+    src/
+      components/
+      services/api.js
+    public/
     package.json
 ```
 
-## Data Model
-
-### Participant
-
-Stores each join request:
-
-- full_name
-- email (unique)
-- phone
-- region
-- role (learner | contributor | volunteer | ambassador)
-- motivation
-- created_at
-- is_active
-
-### Region
-
-Tracks campaign region entities:
-
-- governorate
-- delegation_count
-- participant_count
-
-### Activity
-
-Defines campaign activities:
-
-- title
-- description
-- activity_type
-- icon
-- participant_count
-
-## API Endpoints
-
-Base URL: `http://localhost:8000/api/campaign/`
-
-- `GET /participants/` - List active participants
-- `POST /participants/` - Register a new participant
-- `GET /regions/` - List regions
-- `GET /activities/` - List activities
-- `GET /stats/` - Campaign summary stats
-
-### Example Registration Request
-
-```json
-{
-  "full_name": "Jane Doe",
-  "email": "jane@example.com",
-  "phone": "20123456",
-  "region": "Tunis",
-  "role": "learner",
-  "motivation": "I want to learn and help improve real estate transparency in Tunisia."
-}
-```
-
-## Local Setup
+## Local Development Setup
 
 ## 1) Clone
 
@@ -119,36 +97,29 @@ git clone https://github.com/fares279/Aaref_Bledek-compaign.git
 cd Aaref_Bledek-compaign
 ```
 
-## 2) Backend Setup
+## 2) Backend
 
-Recommended Python version: 3.11 (matches the project virtual environment compatibility).
+Use Python 3.11.
 
 ```bash
 cd backend
 python -m venv venv
+
 # Windows
 venv\Scripts\activate
+
 # macOS/Linux
 source venv/bin/activate
 
 pip install -r requirements.txt
-```
+copy .env.template .env  # Windows
+# cp .env.template .env  # macOS/Linux
 
-Create backend environment file:
-
-- Copy `.env.template` to `.env`
-- Update values as needed
-
-Run migrations and start backend:
-
-```bash
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
 ```
 
-## 3) Frontend Setup
-
-In a new terminal:
+## 3) Frontend
 
 ```bash
 cd frontend
@@ -156,184 +127,231 @@ npm install
 npm start
 ```
 
-Frontend default URL: `http://localhost:3000`
+Frontend: http://localhost:3000
+Backend: http://localhost:8000
 
-## 4) Create Admin User (Optional but Recommended)
+## 4) Local Admin User
 
 ```bash
 cd backend
 python manage.py createsuperuser
 ```
 
-Admin URL: `http://127.0.0.1:8000/admin/`
+Admin URL: http://127.0.0.1:8000/admin/
 
-## Form Validation Behavior
+## Production Deployment (Render + Vercel)
 
-### Frontend checks
+## Step A: Deploy PostgreSQL on Render
 
-- Required full name
-- Valid email format
-- Tunisian phone format (`+216XXXXXXXX` or `XXXXXXXX`)
-- Required region and role
-- Motivation length >= 20 characters
+1. Create a new Render Postgres instance.
+2. Copy these values from database info page:
+   - Hostname
+   - Port
+   - Database
+   - Username
+   - Password
 
-### Backend checks
+## Step B: Deploy Backend on Render (Web Service)
 
-- Email uniqueness
-- Phone regex validation
-- Motivation minimum length
-- Structured success/error response payload
+Create Web Service from the same GitHub repo.
 
-## Current Notes
+Use these settings:
 
-- The platform is campaign-focused and currently optimized around registration and participation.
-- Stats and catalog endpoints are implemented and ready for richer frontend integration.
-- Basic placeholder tests exist but should be expanded for production quality.
+- Runtime: Python
+- Branch: main
+- Root Directory: backend
+- Build Command: bash build.sh
+- Start Command: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+- Health Check Path: /healthz
 
-## Suggested Next Improvements
+Important compatibility setting:
 
-- Add automated API tests for participant registration and stats.
-- Add frontend integration tests for the 3-step join modal.
-- Add CI pipeline (lint + tests + build).
-- Add production-ready deployment configs (Docker / Nginx / Gunicorn).
+- backend/.python-version is pinned to 3.11.9
+- This avoids Django 4.2 + Python 3.14 admin/template runtime errors.
 
-## Shareable Public URL (Production Guide)
+## Step C: Deploy Frontend on Vercel
 
-If you want people on other devices to open your campaign page and submit the form into your database, you need both parts hosted online:
+Create project from same GitHub repo.
 
-1. Backend API + database hosted on a cloud service.
-2. Frontend hosted on a public static hosting service.
+Use these settings:
 
-### What I already prepared in this repository
+- Framework: Create React App
+- Root Directory: frontend
+- Build Command: npm run build
+- Output Directory: build
 
-- Added deployment-oriented backend settings in `backend/config/settings.py`:
-  - `ALLOWED_HOSTS` from env.
-  - `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` from env.
-  - secure proxy/cookie settings toggled by env.
-  - WhiteNoise static serving for Django admin assets.
-- Added backend deployment files:
-  - `backend/Procfile`
-  - `backend/build.sh`
-  - `backend/runtime.txt`
-- Added production dependencies to `backend/requirements.txt`:
-  - `gunicorn`
-  - `whitenoise`
-- Extended `backend/.env.template` with deployment variables.
+Set Vercel env var:
 
-### Manual Steps You Must Do
+- REACT_APP_API_URL=https://aaref-bledek.onrender.com/api/campaign
 
-You need to create cloud services/accounts and set environment variables. I cannot do these account-level operations for you from this environment.
+Deploy and copy final production domain (for example: https://aaref-bledek.vercel.app).
 
-## Option A (Recommended): Render + Render Postgres + Vercel
+## Step D: Final Backend CORS/CSRF Sync
 
-### Step 1: Deploy backend on Render
+After frontend domain is live, update backend env:
 
-1. Create a new **Web Service** from your GitHub repo.
-2. Set **Root Directory** to `backend`.
-3. Build command:
+- CORS_ALLOWED_ORIGINS=https://aaref-bledek.vercel.app
+- CSRF_TRUSTED_ORIGINS=https://aaref-bledek.vercel.app
 
-```bash
-bash build.sh
-```
+Redeploy backend.
 
-4. Start command:
+## Environment Variables (Backend, Production)
 
-```bash
-gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
-```
-
-5. Create a **Render Postgres** database.
-6. Set backend environment variables in Render:
+Set these in Render Web Service environment:
 
 ```env
 SECRET_KEY=<strong-random-secret>
 DEBUG=False
+TIME_ZONE=UTC
+
 USE_SQLITE=False
+DB_NAME=<render_db_name>
+DB_USER=<render_db_user>
+DB_PASSWORD=<render_db_password>
+DB_HOST=<render_db_host>
+DB_PORT=5432
+DB_SSLMODE=require
+DB_CONN_MAX_AGE=0
+DB_CONN_HEALTH_CHECKS=True
 
-DB_NAME=<from-render-postgres>
-DB_USER=<from-render-postgres>
-DB_PASSWORD=<from-render-postgres>
-DB_HOST=<from-render-postgres>
-DB_PORT=<from-render-postgres>
-
-ALLOWED_HOSTS=<your-backend-service>.onrender.com
-CORS_ALLOWED_ORIGINS=https://<your-frontend-domain>
-CSRF_TRUSTED_ORIGINS=https://<your-frontend-domain>
-
+ALLOWED_HOSTS=aaref-bledek.onrender.com,.onrender.com,localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=https://aaref-bledek.vercel.app
+CSRF_TRUSTED_ORIGINS=https://aaref-bledek.vercel.app
 SESSION_COOKIE_SECURE=True
 CSRF_COOKIE_SECURE=True
 ```
 
-7. After first deploy, run once in Render shell:
-
-```bash
-python manage.py createsuperuser
-```
-
-### Step 2: Deploy frontend on Vercel
-
-1. Import the same GitHub repo in Vercel.
-2. Set **Root Directory** to `frontend`.
-3. Framework preset: Create React App.
-4. Add frontend environment variable:
+Optional admin bootstrap when shell access is unavailable:
 
 ```env
-REACT_APP_API_URL=https://<your-backend-service>.onrender.com/api/campaign
+CREATE_SUPERUSER=True
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_EMAIL=you@example.com
+DJANGO_SUPERUSER_PASSWORD=<strong-password>
 ```
 
-5. Deploy and get your public frontend URL.
+After first successful deploy and login, set CREATE_SUPERUSER to False.
 
-### Step 3: Final CORS/CSRF sync
+## API Reference
 
-Update Render backend env values to your final Vercel domain:
+Base URL:
 
-```env
-CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>
-CSRF_TRUSTED_ORIGINS=https://<your-vercel-domain>
+- Local: http://localhost:8000/api/campaign/
+- Production: https://aaref-bledek.onrender.com/api/campaign/
+
+Endpoints:
+
+- GET /participants/
+- POST /participants/
+- GET /regions/
+- GET /activities/
+- GET /stats/
+
+Example payload:
+
+```json
+{
+  "full_name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "20123456",
+  "region": "Tunis",
+  "role": "learner",
+  "motivation": "I want to learn and contribute to real estate transparency in Tunisia."
+}
 ```
 
-Redeploy backend.
+## Verification Checklist
 
-### Step 4: Validate end-to-end
+Run these checks after deployment:
 
-1. Open your Vercel URL on phone/laptop.
-2. Fill the Join form and submit.
-3. Check records at:
+1. Backend health:
+   - https://aaref-bledek.onrender.com/healthz
+2. Backend admin login:
+   - https://aaref-bledek.onrender.com/admin/
+3. API root:
+   - https://aaref-bledek.onrender.com/api/campaign/
+4. Frontend site:
+   - https://aaref-bledek.vercel.app
+5. Submit form from frontend and confirm in admin participants list.
 
-`https://<your-backend-service>.onrender.com/admin/campaign/participant/`
+Note: backend root URL `/` returning 404 is expected and not an error.
 
-If records appear there, your public flow is fully working.
+## Troubleshooting Guide (Real Incidents)
 
-## Option B (Quick temporary link, not recommended for production)
+## 1) Build fails on Pillow with Python 3.14
 
-You can tunnel your local machine with tools like Cloudflare Tunnel or ngrok. This gives a shareable URL quickly, but:
+Symptom:
 
-- Your computer must stay on.
-- Your internet must stay stable.
-- Security and reliability are weaker.
+- Failed to build Pillow during Render build.
 
-For real usage, use Option A.
+Fix:
 
-## Common Issues and Fixes
+- Remove unused Pillow dependency.
 
-- **Form opens but submit fails (CORS error):**
-  - Backend `CORS_ALLOWED_ORIGINS` does not match frontend URL exactly.
-- **403 CSRF error:**
-  - Add frontend domain to `CSRF_TRUSTED_ORIGINS`.
-- **500 on submit:**
-  - Check DB env vars and migrations.
-- **Admin CSS broken:**
-  - Ensure `collectstatic` ran during build (already handled by `build.sh`).
+## 2) Build fails on psycopg2-binary
 
-## Your final shareable URL
+Symptom:
 
-Send people the **frontend URL** (Vercel). They should not use backend API URLs directly.
+- Error loading psycopg module or no matching distribution.
 
-Example:
+Fix:
 
-`https://aaref-bledek-campaign.vercel.app`
+- Use psycopg v3 binary package in requirements.
 
-Form submissions will then be stored in your hosted Postgres DB and visible in Django admin.
+## 3) Admin page returns 500 with Django template context error
+
+Symptom:
+
+- AttributeError in django/template/context internals.
+
+Fix:
+
+- Run backend on Python 3.11 (pin in backend/.python-version).
+
+## 4) Bad Request (400) on all URLs
+
+Symptom:
+
+- DisallowedHost behavior.
+
+Fix:
+
+- Ensure env key is ALLOWED_HOSTS (plural), not ALLOWED_HOST.
+
+## 5) Vercel build fails while local build works
+
+Symptom:
+
+- CI build fails due warnings treated as errors.
+
+Fix:
+
+- Remove UTF-8 BOM from affected source file.
+
+## 6) CORS or CSRF errors on form submission
+
+Fix:
+
+- CORS_ALLOWED_ORIGINS and CSRF_TRUSTED_ORIGINS must exactly match deployed frontend domain.
+
+## Security and Maintenance
+
+## Required security actions
+
+1. Rotate SECRET_KEY if exposed.
+2. Rotate database password/credentials if exposed.
+3. Disable CREATE_SUPERUSER after first setup.
+
+## Free tier warning
+
+Render free Postgres instances can expire if not upgraded. Monitor database expiry date in Render dashboard.
+
+## Suggested improvements
+
+1. Add automated API tests.
+2. Add frontend integration tests for join form.
+3. Add CI (lint + test + build).
+4. Add backup/export strategy for participant data.
 
 ## Author
 
