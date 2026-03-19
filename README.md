@@ -197,6 +197,144 @@ Admin URL: `http://127.0.0.1:8000/admin/`
 - Add CI pipeline (lint + tests + build).
 - Add production-ready deployment configs (Docker / Nginx / Gunicorn).
 
+## Shareable Public URL (Production Guide)
+
+If you want people on other devices to open your campaign page and submit the form into your database, you need both parts hosted online:
+
+1. Backend API + database hosted on a cloud service.
+2. Frontend hosted on a public static hosting service.
+
+### What I already prepared in this repository
+
+- Added deployment-oriented backend settings in `backend/config/settings.py`:
+  - `ALLOWED_HOSTS` from env.
+  - `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` from env.
+  - secure proxy/cookie settings toggled by env.
+  - WhiteNoise static serving for Django admin assets.
+- Added backend deployment files:
+  - `backend/Procfile`
+  - `backend/build.sh`
+  - `backend/runtime.txt`
+- Added production dependencies to `backend/requirements.txt`:
+  - `gunicorn`
+  - `whitenoise`
+- Extended `backend/.env.template` with deployment variables.
+
+### Manual Steps You Must Do
+
+You need to create cloud services/accounts and set environment variables. I cannot do these account-level operations for you from this environment.
+
+## Option A (Recommended): Render + Render Postgres + Vercel
+
+### Step 1: Deploy backend on Render
+
+1. Create a new **Web Service** from your GitHub repo.
+2. Set **Root Directory** to `backend`.
+3. Build command:
+
+```bash
+bash build.sh
+```
+
+4. Start command:
+
+```bash
+gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+```
+
+5. Create a **Render Postgres** database.
+6. Set backend environment variables in Render:
+
+```env
+SECRET_KEY=<strong-random-secret>
+DEBUG=False
+USE_SQLITE=False
+
+DB_NAME=<from-render-postgres>
+DB_USER=<from-render-postgres>
+DB_PASSWORD=<from-render-postgres>
+DB_HOST=<from-render-postgres>
+DB_PORT=<from-render-postgres>
+
+ALLOWED_HOSTS=<your-backend-service>.onrender.com
+CORS_ALLOWED_ORIGINS=https://<your-frontend-domain>
+CSRF_TRUSTED_ORIGINS=https://<your-frontend-domain>
+
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+```
+
+7. After first deploy, run once in Render shell:
+
+```bash
+python manage.py createsuperuser
+```
+
+### Step 2: Deploy frontend on Vercel
+
+1. Import the same GitHub repo in Vercel.
+2. Set **Root Directory** to `frontend`.
+3. Framework preset: Create React App.
+4. Add frontend environment variable:
+
+```env
+REACT_APP_API_URL=https://<your-backend-service>.onrender.com/api/campaign
+```
+
+5. Deploy and get your public frontend URL.
+
+### Step 3: Final CORS/CSRF sync
+
+Update Render backend env values to your final Vercel domain:
+
+```env
+CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>
+CSRF_TRUSTED_ORIGINS=https://<your-vercel-domain>
+```
+
+Redeploy backend.
+
+### Step 4: Validate end-to-end
+
+1. Open your Vercel URL on phone/laptop.
+2. Fill the Join form and submit.
+3. Check records at:
+
+`https://<your-backend-service>.onrender.com/admin/campaign/participant/`
+
+If records appear there, your public flow is fully working.
+
+## Option B (Quick temporary link, not recommended for production)
+
+You can tunnel your local machine with tools like Cloudflare Tunnel or ngrok. This gives a shareable URL quickly, but:
+
+- Your computer must stay on.
+- Your internet must stay stable.
+- Security and reliability are weaker.
+
+For real usage, use Option A.
+
+## Common Issues and Fixes
+
+- **Form opens but submit fails (CORS error):**
+  - Backend `CORS_ALLOWED_ORIGINS` does not match frontend URL exactly.
+- **403 CSRF error:**
+  - Add frontend domain to `CSRF_TRUSTED_ORIGINS`.
+- **500 on submit:**
+  - Check DB env vars and migrations.
+- **Admin CSS broken:**
+  - Ensure `collectstatic` ran during build (already handled by `build.sh`).
+
+## Your final shareable URL
+
+Send people the **frontend URL** (Vercel). They should not use backend API URLs directly.
+
+Example:
+
+`https://aaref-bledek-campaign.vercel.app`
+
+Form submissions will then be stored in your hosted Postgres DB and visible in Django admin.
+
 ## Author
 
 Developed for the EstateMind campaign initiative.
