@@ -71,7 +71,8 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default='EstateMind2026!'),
         'HOST': config('DB_HOST', default='localhost'),
         'PORT': config('DB_PORT', default='5432'),
-        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=60, cast=int),
+        'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=0, cast=int),
+        'CONN_HEALTH_CHECKS': config('DB_CONN_HEALTH_CHECKS', default=True, cast=bool),
         'OPTIONS': {
             'sslmode': config('DB_SSLMODE', default='require'),
         },
