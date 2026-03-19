@@ -4,11 +4,9 @@ from .models import Participant, Region, Activity
 
 @admin.register(Participant)
 class ParticipantAdmin(admin.ModelAdmin):
-    list_display = ['full_name', 'email', 'region', 'role', 'created_at', 'is_active']
-    list_filter = ['role', 'region', 'is_active']
-    search_fields = ['full_name', 'email', 'phone', 'region']
-    ordering = ['-created_at']
+    list_display = ['id', 'full_name', 'email', 'region', 'role', 'is_active', 'created_at']
     readonly_fields = ['created_at']
+    list_per_page = 25
 
 
 @admin.register(Region)
